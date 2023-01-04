@@ -1,0 +1,5 @@
+Write command:
+#Wxx;
+
+xx = hexadecimal value to send
+Will also send the received value back
