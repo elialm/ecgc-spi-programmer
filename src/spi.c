@@ -33,13 +33,16 @@ void spi_master_init(uint8_t freq)
 	// pullup MISO line
 	SPI_PORT |= (1 << SPI_SS);
 	
-	// emable spi, select master and set frequency
+	// enable spi, select master and set frequency
 	if (READ_BIT(freq, 3)) 
 	{
 		SPSR |= (1 << SPI2X);
 		freq &= ~0x03;
 	}
 	SPCR |= (1 << SPE) | (1 << MSTR) | (freq << SPR0);
+
+	// set default SPI mode
+	SPCR &= ~(1 << CPOL) & ~(1 << CPHA) & ~(1 << DORD);
 }
 
 void spi_master_tx(uint8_t data)

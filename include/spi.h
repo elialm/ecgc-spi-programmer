@@ -37,11 +37,13 @@ extern "C" {
 #endif
 
 void spi_master_init(uint8_t freq);
+void spi_master_tx(uint8_t data);
+uint8_t spi_master_rx();
+
 void spi_slave_init();
 uint8_t spi_slave_rx();
 int8_t spi_slave_tx(uint8_t data);
-void spi_master_tx(uint8_t data);
-uint8_t spi_master_rx();
+
 void spi_attach_interrupt(void (*func)(void));
 void spi_detach_interrupt();
 
