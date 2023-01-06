@@ -1,4 +1,5 @@
 #include "message_parser.h"
+#include "pin.h"
 #include "spi.h"
 
 #include <Arduino.h>
@@ -8,6 +9,8 @@ static const char hex_digits[16] = {
     '0', '1', '2', '3', '4', '5', '6', '7',
     '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
 };
+
+pin_t ss_pin = pin_define(B, 2);
 
 bool is_hex_digit(const char digit)
 {
@@ -88,8 +91,11 @@ void handle_write(const char* message)
     }
 
     data = parse_hex_byte(message[1], message[2]);
+
+    pin_clear(&ss_pin);
     spi_master_tx(data);
     data = spi_master_rx();
+    pin_set(&ss_pin);
 
     Serial.print("#R");
     Serial.print(compose_hex_nibble(data >> 4));
@@ -127,8 +133,10 @@ void handle_burst_write(const char* message)
         uint8_t i_doubled = i * 2;
         data = parse_hex_byte(message[i_doubled + 1], message[i_doubled + 2]);
     
+        pin_clear(&ss_pin);
         spi_master_tx(data);
         data = spi_master_rx();
+        pin_set(&ss_pin);
 
         read_message[i_doubled] = compose_hex_nibble(data >> 4);
         read_message[i_doubled + 1] = compose_hex_nibble(data);
@@ -166,8 +174,13 @@ uint8_t parser_read_cmd(const char* message)
 }
 
 void setup() {
+    pin_direction(&ss_pin, PIN_OUTPUT);
+    pin_set(&ss_pin);
+
     Serial.begin(115200);
     spi_master_init(SPEED_32);
+
+    Serial.println(SPCR, BIN);
 }
 
 void loop() {
