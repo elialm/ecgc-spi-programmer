@@ -16,7 +16,7 @@ bool is_hex_digit(const char digit)
         || (digit >= 'a' && digit <= 'f');
 }
 
-uint8_t compose_hex_nibble(const uint8_t n)
+char compose_hex_nibble(const uint8_t n)
 {
     return hex_digits[n & 0x0F];
 }
@@ -94,12 +94,12 @@ void handle_write(const char* message)
     Serial.print("#R");
     Serial.print(compose_hex_nibble(data >> 4));
     Serial.print(compose_hex_nibble(data));
-    Serial.println(';');
+    Serial.print(';');
 
     return;
 
     error:
-    Serial.println("#EINV;");
+    Serial.print("#EINV;");
     return;
 }
 
@@ -137,12 +137,12 @@ void handle_burst_write(const char* message)
 
     Serial.print("#R");
     Serial.print(read_message);
-    Serial.println(';');
+    Serial.print(';');
 
     return;
 
     error:
-    Serial.println("#EINV;");
+    Serial.print("#EINV;");
     return;
 }
 
@@ -158,7 +158,7 @@ uint8_t parser_read_cmd(const char* message)
             break;
 
         default:
-            Serial.println("#EPERM;");
+            Serial.print("#EPERM;");
             break;
     }
 
