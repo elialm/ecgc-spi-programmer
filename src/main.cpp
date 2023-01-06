@@ -16,6 +16,11 @@ bool is_hex_digit(const char digit)
         || (digit >= 'a' && digit <= 'f');
 }
 
+uint8_t compose_hex_nibble(const uint8_t n)
+{
+    return hex_digits[n & 0x0F];
+}
+
 uint8_t parse_hex_nibble(const char n)
 {
     switch (n) {
@@ -87,8 +92,51 @@ void handle_write(const char* message)
     data = spi_master_rx();
 
     Serial.print("#R");
-    Serial.print(hex_digits[(data >> 4) & 0x0F]);
-    Serial.print(hex_digits[data & 0x0F]);
+    Serial.print(compose_hex_nibble(data >> 4));
+    Serial.print(compose_hex_nibble(data));
+    Serial.println(';');
+
+    return;
+
+    error:
+    Serial.println("#EINV;");
+    return;
+}
+
+void handle_burst_write(const char* message)
+{
+    uint8_t length = strlen(message);
+    uint8_t byte_length = length / 2;
+    uint8_t data;
+    char read_message[17];
+
+    // message format is Bxxyyzz... where the lower case letters are some hex byte.
+    // the maximum number of bursts is 8 bytes, hence the max size of 17
+    // 1 command char + 2 chars/byte * nr. of bytes
+    if (length % 2 == 0 || length < 3 || length > 17) {
+        goto error;
+    }
+
+    for (uint8_t i = 1; i < length; i++) {
+        if (!is_hex_digit(message[i])) {
+            goto error;
+        }
+    }
+
+    for (uint8_t i = 0; i < byte_length; i++) {
+        uint8_t i_doubled = i * 2;
+        data = parse_hex_byte(message[i_doubled + 1], message[i_doubled + 2]);
+    
+        spi_master_tx(data);
+        data = spi_master_rx();
+
+        read_message[i_doubled] = compose_hex_nibble(data >> 4);
+        read_message[i_doubled + 1] = compose_hex_nibble(data);
+        read_message[i_doubled + 2] = '\0';
+    }
+
+    Serial.print("#R");
+    Serial.print(read_message);
     Serial.println(';');
 
     return;
@@ -105,8 +153,12 @@ uint8_t parser_read_cmd(const char* message)
             handle_write(message);
             break;
 
+        case 'B':
+            handle_burst_write(message);
+            break;
+
         default:
-            Serial.println("Received unknown command");
+            Serial.println("#EPERM;");
             break;
     }
 
@@ -123,5 +175,7 @@ void loop() {
         parser_read_letter(Serial.read());
     }
 
-    delay(5);
+    if (!Serial.available()) {
+        delay(10);
+    }
 }
