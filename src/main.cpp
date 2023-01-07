@@ -179,8 +179,6 @@ void setup() {
 
     Serial.begin(115200);
     spi_master_init(SPEED_32);
-
-    Serial.println(SPCR, BIN);
 }
 
 void loop() {
