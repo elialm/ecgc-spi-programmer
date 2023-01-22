@@ -41,8 +41,9 @@ void spi_master_init(uint8_t freq)
 	}
 	SPCR |= (1 << SPE) | (1 << MSTR) | (freq << SPR0);
 
-	// set default SPI mode
-	SPCR &= ~(1 << CPOL) & ~(1 << CPHA) & ~(1 << DORD);
+	// set to SPI mode of programmer
+	SPCR &= ~(1 << CPOL) & ~(1 << CPHA);
+	SPCR |= (1 << DORD);
 }
 
 void spi_master_tx(uint8_t data)
