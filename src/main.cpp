@@ -11,6 +11,7 @@ static const char hex_digits[16] = {
 };
 
 pin_t ss_pin = pin_define(B, 2);
+pin_t dbgen_pin = pin_define(C, 0);
 
 bool is_hex_digit(const char digit)
 {
@@ -154,6 +155,25 @@ void handle_burst_write(const char* message)
     return;
 }
 
+void handle_dbg_enable(const char* message, bool enable)
+{
+    uint8_t length = strlen(message);
+
+    if (length != 1) {
+        goto error;
+    }
+
+    if (enable) {
+        pin_set(&dbgen_pin);
+    } else {
+        pin_clear(&dbgen_pin);
+    }
+
+    error:
+    Serial.print("#EINV;");
+    return;
+}
+
 uint8_t parser_read_cmd(const char* message)
 {
     switch (message[0]) {
@@ -163,6 +183,14 @@ uint8_t parser_read_cmd(const char* message)
 
         case 'B':
             handle_burst_write(message);
+            break;
+
+        case 'E':
+            handle_dbg_enable(message, true);
+            break;
+
+        case 'D':
+            handle_dbg_enable(message, false);
             break;
 
         default:
@@ -175,7 +203,9 @@ uint8_t parser_read_cmd(const char* message)
 
 void setup() {
     pin_direction(&ss_pin, PIN_OUTPUT);
+    pin_direction(&dbgen_pin, PIN_OUTPUT);
     pin_set(&ss_pin);
+    pin_clear(&dbgen_pin);
 
     Serial.begin(115200);
     spi_master_init(SPEED_32);
