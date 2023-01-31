@@ -212,6 +212,9 @@ void setup() {
 
     Serial.begin(115200);
     spi_master_init(SPEED_32);
+
+    // Indicate that programmer is ready
+    Serial.print("#READY;");
 }
 
 void loop() {
