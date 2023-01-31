@@ -169,6 +169,9 @@ void handle_dbg_enable(const char* message, bool enable)
         pin_clear(&dbgen_pin);
     }
 
+    Serial.print("#SUCCESS;");
+    return;
+
     error:
     Serial.print("#EINV;");
     return;
