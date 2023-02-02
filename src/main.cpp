@@ -221,8 +221,4 @@ void loop() {
     if (Serial.available()) {
         parser_read_letter(Serial.read());
     }
-
-    if (!Serial.available()) {
-        delay(10);
-    }
 }
