@@ -10,13 +10,13 @@
 #ifndef SPI_H_
 #define SPI_H_
 
-#define SPEED_2 4
-#define SPEED_4 0
-#define SPEED_8 5
-#define SPEED_16 1
-#define SPEED_32 6
-#define SPEED_64 2
-#define SPEED_128 3
+#define SPEED_2 0b100
+#define SPEED_4 0b000
+#define SPEED_8 0b101
+#define SPEED_16 0b001
+#define SPEED_32 0b110
+#define SPEED_64 0b010
+#define SPEED_128 0b011
 
 #define SPI_DDR DDRB
 #define SPI_PORT PORTB
