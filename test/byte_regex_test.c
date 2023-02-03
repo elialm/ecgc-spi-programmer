@@ -112,15 +112,17 @@ int main(void) {
     return runUnityTests();
 }
 
-// /**
-//   * For Arduino framework
-//   */
-// void setup()
-// {
-//     // Wait ~2 seconds before the Unity test runner
-//     // establishes connection with a board Serial interface
-//     delay(2000);
+/**
+  * For Arduino framework
+  */
+void setup()
+{
+    // Wait ~2 seconds before the Unity test runner
+    // establishes connection with a board Serial interface
+    #ifndef ENVIRONMENT_NATIVE
+    delay(2000);
+    #endif //ENVIRONMENT_NATIVE
 
-//     runUnityTests();
-// }
-// void loop() {}
+    runUnityTests();
+}
+void loop() {}
