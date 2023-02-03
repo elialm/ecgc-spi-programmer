@@ -74,7 +74,38 @@ int8_t spi_debugger_set_auto_increment(pin_t *cs_pin, pin_t *dbg_pin, const bool
 
 int8_t spi_debugger_set_address(pin_t *cs_pin, pin_t *dbg_pin, uint16_t address)
 {
-    return -1;
+    int err;
+    uint8_t read_buffer[2];
+    uint8_t address_data[2] = { 0x00, 0x0F };
+    uint8_t address_response_pattern[4] = { 0x11, 0x00, 0x00, 0x00 };
+    uint8_t address_high = (address >> 8) & 0xFF;
+    uint8_t address_low = address & 0xFF;
+
+    // set high address command
+    if ((err = __spi_debugger_send_packet("\x03\x0F", read_buffer, 2, "\x11\xF1\x31")) != 0) {
+        return -1;
+    }
+
+    // set high address data
+    address_data[0] = address_high;
+    address_response_pattern[2] = address_high;
+    if ((err = __spi_debugger_send_packet(address_data, read_buffer, 2, address_response_pattern)) != 0) {
+        return -2;
+    }
+
+    // set low address command
+    if ((err = __spi_debugger_send_packet("\x02\x0F", read_buffer, 2, "\x11\xF1\x21")) != 0) {
+        return -3;
+    }
+
+    // set low address data
+    address_data[0] = address_low;
+    address_response_pattern[2] = address_low;
+    if ((err = __spi_debugger_send_packet(address_data, read_buffer, 2, address_response_pattern)) != 0) {
+        return -4;
+    }
+
+    return 0;
 }
 
 int8_t spi_debugger_write(pin_t *cs_pin, pin_t *dbg_pin, const uint8_t *data, size_t data_length)
