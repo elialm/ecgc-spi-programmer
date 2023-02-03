@@ -1,71 +1,50 @@
 #include "message_parser.h"
 
 #include <stdbool.h>
-#include <inttypes.h>
 #include <stddef.h>
-#include <string.h>
 
-static char message[MAX_MESSAGE_SIZE + 1] = {0};
-static uint8_t message_index = 0;
-static bool hold = false;
-static uint8_t command = 0;
+static parser_func_overload_handler_t parser_overload_handler = NULL;
+static parser_func_message_handler_t parser_message_handler = NULL;
 
-static void read_message()
+static char msg_buffer[MAX_MESSAGE_SIZE + 1];
+static uint8_t msg_index = 0;
+static bool msg_overloaded = false;
+
+void parser_set_overload_handler(parser_func_overload_handler_t overload_handler)
 {
-	message[message_index] = '\0';
-	command = parser_read_cmd(message);
-	
-	message_index = 0;
-	hold = false;
+	parser_overload_handler = overload_handler;
 }
 
-uint8_t parser_get_cmd()
+void parser_set_message_handler(parser_func_message_handler_t message_handler)
 {
-	uint8_t cmd = command;
-	command = 0;
-	return cmd;
+	parser_message_handler = message_handler;
 }
 
-void parser_read_letter(const char letter)
+void parser_read_byte(const char read_byte)
 {
-	bool read_after_write = false;
-	
-	if (letter == MESSAGE_BEGIN)
-	{
-		message_index = 0;
-		hold = true;
-	}
-	else if (letter == MESSAGE_END && hold)
-	{
-		read_after_write = true;
-	}
-	else if (hold)
-	{
-		if (message_index == (MAX_MESSAGE_SIZE - 2)) {
-			read_after_write = true;
+	msg_buffer[msg_index] = read_byte;
+
+	if (msg_overloaded) {
+		if (read_byte == '\n') {
+			msg_overloaded = false;
 		}
-		
-		message[message_index++] = letter;
-	}
-	
-	if (read_after_write) {
-		read_message();
-	}
-}
+	} else {
+		if (read_byte == '\n') {
+			msg_buffer[msg_index] = '\0';
+			msg_index = 0;
 
-int8_t parser_message_builder(char* output, const char* message)
-{
-	if (output == NULL || message == NULL) {
-		return -1;
+			if (parser_message_handler) {
+				parser_message_handler(msg_buffer);
+			}
+		} else {
+			msg_index++;
+			if (msg_index == MAX_MESSAGE_SIZE) {
+				msg_overloaded = true;
+
+				if (parser_overload_handler) {
+					parser_overload_handler();
+				}
+			}
+		}
 	}
-	
-	strcpy(output + 1, message);
-	
-	uint8_t str_length = strlen(output);
-	
-	output[0] = MESSAGE_BEGIN;
-	output[str_length] = MESSAGE_END;
-	output[str_length + 1] = '\0';
-	
-	return 0;
 }

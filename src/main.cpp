@@ -1,6 +1,5 @@
 #include "message_parser.h"
 #include "pin.h"
-#include "spi.h"
 
 #include <Arduino.h>
 #include <string.h>
@@ -11,7 +10,7 @@ static const char hex_digits[16] = {
 };
 
 pin_t ss_pin = pin_define(B, 2);
-pin_t dbgen_pin = pin_define(C, 0);
+pin_t dbg_pin = pin_define(C, 0);
 
 bool is_hex_digit(const char digit)
 {
@@ -78,147 +77,158 @@ uint8_t parse_hex_byte(const char h, const char l)
     return (parsed_h & 0xF0) | (parsed_l & 0x0F);
 }
 
-void handle_write(const char* message)
-{
-    uint8_t length = strlen(message);
-    uint8_t data = 0;
+// void handle_write(const char* message)
+// {
+//     uint8_t length = strlen(message);
+//     uint8_t data = 0;
 
-    if (length != 3) {
-        goto error;
-    }
+//     if (length != 3) {
+//         goto error;
+//     }
 
-    if (!is_hex_digit(message[1]) || !is_hex_digit(message[2])) {
-        goto error;
-    }
+//     if (!is_hex_digit(message[1]) || !is_hex_digit(message[2])) {
+//         goto error;
+//     }
 
-    data = parse_hex_byte(message[1], message[2]);
+//     data = parse_hex_byte(message[1], message[2]);
 
-    pin_clear(&ss_pin);
-    spi_master_tx(data);
-    data = spi_master_rx();
-    pin_set(&ss_pin);
+//     pin_clear(&ss_pin);
+//     spi_master_tx(data);
+//     data = spi_master_rx();
+//     pin_set(&ss_pin);
 
-    Serial.print("#R");
-    Serial.print(compose_hex_nibble(data >> 4));
-    Serial.print(compose_hex_nibble(data));
-    Serial.print(';');
+//     Serial.print("#R");
+//     Serial.print(compose_hex_nibble(data >> 4));
+//     Serial.print(compose_hex_nibble(data));
+//     Serial.print(';');
 
-    return;
+//     return;
 
-    error:
-    Serial.print("#EINV;");
-    return;
-}
+//     error:
+//     Serial.print("#EINV;");
+//     return;
+// }
 
-void handle_burst_write(const char* message)
-{
-    uint8_t length = strlen(message);
-    uint8_t byte_length = length / 2;
-    uint8_t data;
-    char read_message[17];
+// void handle_burst_write(const char* message)
+// {
+//     uint8_t length = strlen(message);
+//     uint8_t byte_length = length / 2;
+//     uint8_t data;
+//     char read_message[17];
 
-    // message format is Bxxyyzz... where the lower case letters are some hex byte.
-    // the maximum number of bursts is 8 bytes, hence the max size of 17
-    // 1 command char + 2 chars/byte * nr. of bytes
-    if (length % 2 == 0 || length < 3 || length > 17) {
-        goto error;
-    }
+//     // message format is Bxxyyzz... where the lower case letters are some hex byte.
+//     // the maximum number of bursts is 8 bytes, hence the max size of 17
+//     // 1 command char + 2 chars/byte * nr. of bytes
+//     if (length % 2 == 0 || length < 3 || length > 17) {
+//         goto error;
+//     }
 
-    for (uint8_t i = 1; i < length; i++) {
-        if (!is_hex_digit(message[i])) {
-            goto error;
-        }
-    }
+//     for (uint8_t i = 1; i < length; i++) {
+//         if (!is_hex_digit(message[i])) {
+//             goto error;
+//         }
+//     }
 
-    for (uint8_t i = 0; i < byte_length; i++) {
-        uint8_t i_doubled = i * 2;
-        data = parse_hex_byte(message[i_doubled + 1], message[i_doubled + 2]);
+//     for (uint8_t i = 0; i < byte_length; i++) {
+//         uint8_t i_doubled = i * 2;
+//         data = parse_hex_byte(message[i_doubled + 1], message[i_doubled + 2]);
     
-        pin_clear(&ss_pin);
-        spi_master_tx(data);
-        data = spi_master_rx();
-        pin_set(&ss_pin);
+//         pin_clear(&ss_pin);
+//         spi_master_tx(data);
+//         data = spi_master_rx();
+//         pin_set(&ss_pin);
 
-        read_message[i_doubled] = compose_hex_nibble(data >> 4);
-        read_message[i_doubled + 1] = compose_hex_nibble(data);
-        read_message[i_doubled + 2] = '\0';
-    }
+//         read_message[i_doubled] = compose_hex_nibble(data >> 4);
+//         read_message[i_doubled + 1] = compose_hex_nibble(data);
+//         read_message[i_doubled + 2] = '\0';
+//     }
 
-    Serial.print("#R");
-    Serial.print(read_message);
-    Serial.print(';');
+//     Serial.print("#R");
+//     Serial.print(read_message);
+//     Serial.print(';');
 
-    return;
+//     return;
 
-    error:
-    Serial.print("#EINV;");
-    return;
-}
+//     error:
+//     Serial.print("#EINV;");
+//     return;
+// }
 
-void handle_dbg_enable(const char* message, bool enable)
-{
-    uint8_t length = strlen(message);
+// void handle_dbg_enable(const char* message, bool enable)
+// {
+//     uint8_t length = strlen(message);
 
-    if (length != 1) {
-        goto error;
-    }
+//     if (length != 1) {
+//         goto error;
+//     }
 
-    if (enable) {
-        pin_set(&dbgen_pin);
-    } else {
-        pin_clear(&dbgen_pin);
-    }
+//     if (enable) {
+//         pin_set(&dbgen_pin);
+//     } else {
+//         pin_clear(&dbgen_pin);
+//     }
 
-    Serial.print("#SUCCESS;");
-    return;
+//     Serial.print("#SUCCESS;");
+//     return;
 
-    error:
-    Serial.print("#EINV;");
-    return;
-}
+//     error:
+//     Serial.print("#EINV;");
+//     return;
+// }
 
-uint8_t parser_read_cmd(const char* message)
+void handle_serial_data(const char* message)
 {
     switch (message[0]) {
+        // SET_ADDR_L
+        case 'L':
+            break;
+
+        // SET_ADDR_H
+        case 'H':
+            break;
+
+        // AUTO_INC_EN and AUTO_INC_DIS
+        case 'I':
+            break;
+
+        // READ
+        case 'R':
+            break;
+
+        // WRITE
         case 'W':
-            handle_write(message);
             break;
 
-        case 'B':
-            handle_burst_write(message);
-            break;
-
-        case 'E':
-            handle_dbg_enable(message, true);
-            break;
-
+        // DATA
         case 'D':
-            handle_dbg_enable(message, false);
+            break;
+
+        // CORE_ENABLE and CORE_DISABLE
+        case 'C':
             break;
 
         default:
-            Serial.print("#EPERM;");
+            Serial.print("NOCMD\n");
             break;
     }
+}
 
-    return 0;
+void handle_serial_overload()
+{
+    Serial.print("BUFOVER\n");
 }
 
 void setup() {
-    pin_direction(&ss_pin, PIN_OUTPUT);
-    pin_direction(&dbgen_pin, PIN_OUTPUT);
-    pin_set(&ss_pin);
-    pin_clear(&dbgen_pin);
-
-    Serial.begin(115200);
-    spi_master_init(SPEED_32);
+    parser_set_message_handler(handle_serial_data);
+    parser_set_overload_handler(handle_serial_overload);
 
     // Indicate that programmer is ready
-    Serial.print("#READY;");
+    Serial.begin(115200);
+    Serial.print("READY;");
 }
 
 void loop() {
     if (Serial.available()) {
-        parser_read_letter(Serial.read());
+        parser_read_byte(Serial.read());
     }
 }
