@@ -180,5 +180,47 @@ int8_t spi_debugger_write(pin_t *cs_pin, pin_t *dbg_pin, const uint8_t *data, si
 
 int8_t spi_debugger_read(pin_t *cs_pin, pin_t *dbg_pin, uint8_t *data, const size_t data_length)
 {
-    return -1;
+    int err;
+    size_t data_index = 0;
+    size_t burst_amount = data_length / 16;
+    size_t individual_amount = data_length % 16;
+    uint8_t read_buffer[2];
+
+    // read all bursts
+    for (size_t i = 0; i < burst_amount; i++) {
+        // read burst command
+        if ((err = __spi_debugger_send_packet("\x0A\x0F", read_buffer, 2, "\x11\xF1\xA1")) != 0) {
+            return -1;
+        }
+
+        // read burst data
+        for (size_t i = 0; i < 16; i++) {
+            data[data_index + i] = spi_master_tx(0x0F);
+        }
+
+        // next byte read from spi must be 0x00
+        if (spi_master_tx(0x0F) != 0x00) {
+            return -2;
+        }
+
+        data_index += 16;
+    }
+
+    // read all individuals
+    for (size_t i = 0; i < individual_amount; i++, data_index++) {
+        // read command
+        if ((err = __spi_debugger_send_packet("\x08\x0F", read_buffer, 2, "\x11\xF1\x81")) != 0) {
+            return -3;
+        }
+
+        // read data
+        data[data_index] = spi_master_tx(0x0F);
+
+        // next byte read from spi must be 0x00
+        if (spi_master_tx(0x0F) != 0x00) {
+            return -4;
+        }
+    }
+
+    return 0;
 }
