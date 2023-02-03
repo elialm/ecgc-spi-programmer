@@ -15,7 +15,7 @@ static int __spi_debugger_send_packet(const uint8_t *write_data, uint8_t *read_d
 
 int8_t spi_debugger_init(pin_t *cs_pin, pin_t *dbg_pin)
 {
-    uint8_t err;
+    int8_t err;
 
     pin_direction(cs_pin, PIN_OUTPUT);
     pin_direction(dbg_pin, PIN_OUTPUT);
@@ -25,12 +25,23 @@ int8_t spi_debugger_init(pin_t *cs_pin, pin_t *dbg_pin)
 
     spi_master_init(SPEED_16);
 
+    // send idle command to check if core is enabled and flush any ongoing transaction
+    // last byte must be idle response (0xF1)
+    uint8_t flush_response;
+    for (size_t i = 0; i < 18; i++) {
+        flush_response = spi_master_tx(0x0F);
+    }
+
+    if (flush_response != 0xF1) {
+        return -1;
+    }
+
     if ((err = spi_debugger_set_auto_increment(cs_pin, dbg_pin, false)) != 0) {
-        return err;
+        return -2;
     }
 
     if ((err = spi_debugger_set_address(cs_pin, dbg_pin, 0x0000)) != 0) {
-        return err;
+        return -3;
     }
 
     return 0;
@@ -43,7 +54,22 @@ void spi_debugger_deinit(pin_t *cs_pin, pin_t *dbg_pin)
 
 int8_t spi_debugger_set_auto_increment(pin_t *cs_pin, pin_t *dbg_pin, const bool enable)
 {
-    return -1;
+    int err;
+    uint8_t read_buffer[2];
+
+    if (enable) {
+        // enable auto increment command
+        if ((err = __spi_debugger_send_packet("\x04\x0F", read_buffer, 2, "\x11\xF1\x41")) != 0) {
+            return err;
+        }
+    } else {
+        // disable auto increment command
+        if ((err = __spi_debugger_send_packet("\x05\x0F", read_buffer, 2, "\x11\xF1\x51")) != 0) {
+            return err;
+        }
+    }
+
+    return 0;
 }
 
 int8_t spi_debugger_set_address(pin_t *cs_pin, pin_t *dbg_pin, uint16_t address)
