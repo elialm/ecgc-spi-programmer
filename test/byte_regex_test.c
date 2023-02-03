@@ -15,7 +15,7 @@ void tearDown(void)
 
 void test_compile_pattern_0()
 {
-    unsigned int pattern_length = 32;
+    size_t pattern_length = 32;
     uint8_t compiled_pattern[32];
     int return_code = byte_regex_compile_pattern("0F{18}", compiled_pattern, &pattern_length);
 
@@ -37,11 +37,71 @@ void test_validate_pattern()
     UNITY_TEST_ASSERT_EQUAL_INT(0, byte_regex_validate_pattern("\x0F\x01\xF1"), __LINE__, "Pattern should be OK (pattern = [0-9A-F]{2}F1)");
 }
 
+void test_match_pattern_0()
+{
+    const uint8_t* pattern = "\xF2\x0F\x12\x0F";
+    const uint8_t* data = "\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F\x0F";
+    int return_code = byte_regex_match(pattern, data, 18);
+
+    UNITY_TEST_ASSERT_EQUAL_INT(0, return_code, __LINE__, "Unexpected return code");
+}
+
+void test_match_pattern_1()
+{
+    const uint8_t* pattern = "\x11\xF1\x31";
+    const uint8_t* data = "\xF1\x31";
+    int return_code = byte_regex_match(pattern, data, 2);
+
+    UNITY_TEST_ASSERT_EQUAL_INT(0, return_code, __LINE__, "Unexpected return code");
+}
+
+void test_match_pattern_2()
+{
+    const uint8_t* pattern = "\xFF\x0F\x01\xF1";
+    const uint8_t* data = "\x61\x8f\x87\x28\xbc\x2d\x5\x36\xa1\x14\xe0\xa8\xab\x10\xde\x3e\x9b\xF1";
+    int return_code = byte_regex_match(pattern, data, 18);
+
+    UNITY_TEST_ASSERT_EQUAL_INT(0, return_code, __LINE__, "Unexpected return code");
+}
+
+void test_match_pattern_3()
+{
+    const uint8_t* pattern = "\xFF\x0F\x01\xF1";
+    const uint8_t* data = "\x61\x8f\x87\x28\xbc\x2d\x5\x36\xa1\x14\xe0\xa8\xab\x10\xde\x3e\x9b\xF2";
+    int return_code = byte_regex_match(pattern, data, 18);
+
+    UNITY_TEST_ASSERT_EQUAL_INT(18, return_code, __LINE__, "Unexpected return code");
+}
+
+void test_match_pattern_4()
+{
+    const uint8_t* pattern = "\x11\xF1\x31";
+    const uint8_t* data = "\x69\x31";
+    int return_code = byte_regex_match(pattern, data, 2);
+
+    UNITY_TEST_ASSERT_EQUAL_INT(1, return_code, __LINE__, "Unexpected return code");
+}
+
+void test_match_pattern_5()
+{
+    const uint8_t* pattern = "\x11\xF1\x31";
+    const uint8_t* data = "\x73\x9B";
+    int return_code = byte_regex_match(pattern, data, 2);
+
+    UNITY_TEST_ASSERT_EQUAL_INT(1, return_code, __LINE__, "Unexpected return code");
+}
+
 int runUnityTests(void)
 {
     UNITY_BEGIN();
     // RUN_TEST(test_compile_pattern_0);
     RUN_TEST(test_validate_pattern);
+    RUN_TEST(test_match_pattern_0);
+    RUN_TEST(test_match_pattern_1);
+    RUN_TEST(test_match_pattern_2);
+    RUN_TEST(test_match_pattern_3);
+    RUN_TEST(test_match_pattern_4);
+    RUN_TEST(test_match_pattern_5);
     return UNITY_END();
 }
 
