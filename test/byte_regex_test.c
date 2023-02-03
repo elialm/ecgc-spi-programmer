@@ -58,7 +58,7 @@ void test_match_pattern_1()
 void test_match_pattern_2()
 {
     const uint8_t* pattern = "\xFF\x0F\x01\xF1";
-    const uint8_t* data = "\x61\x8f\x87\x28\xbc\x2d\x5\x36\xa1\x14\xe0\xa8\xab\x10\xde\x3e\x9b\xF1";
+    const uint8_t* data = "\x61\x8f\x87\x28\xbc\x2d\x05\x36\xa1\x14\xe0\xa8\xab\x10\xde\x3e\x9b\xF1";
     int return_code = byte_regex_match(pattern, data, 18);
 
     UNITY_TEST_ASSERT_EQUAL_INT(0, return_code, __LINE__, "Unexpected return code");
@@ -67,7 +67,7 @@ void test_match_pattern_2()
 void test_match_pattern_3()
 {
     const uint8_t* pattern = "\xFF\x0F\x01\xF1";
-    const uint8_t* data = "\x61\x8f\x87\x28\xbc\x2d\x5\x36\xa1\x14\xe0\xa8\xab\x10\xde\x3e\x9b\xF2";
+    const uint8_t* data = "\x61\x8f\x87\x28\xbc\x2d\x05\x36\xa1\x14\xe0\xa8\xab\x10\xde\x3e\x9b\xF2";
     int return_code = byte_regex_match(pattern, data, 18);
 
     UNITY_TEST_ASSERT_EQUAL_INT(18, return_code, __LINE__, "Unexpected return code");
