@@ -37,8 +37,7 @@ extern "C" {
 #endif
 
 void spi_master_init(uint8_t freq);
-void spi_master_tx(uint8_t data);
-uint8_t spi_master_rx();
+uint8_t spi_master_tx(uint8_t data);
 
 void spi_slave_init();
 uint8_t spi_slave_rx();

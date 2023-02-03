@@ -46,18 +46,14 @@ void spi_master_init(uint8_t freq)
 	SPCR |= (1 << DORD);
 }
 
-void spi_master_tx(uint8_t data)
+uint8_t spi_master_tx(uint8_t data)
 {
 	// set spi data register to contain data to send
 	SPDR = data;
 	
 	// wait until data has been sent
 	while (!(SPSR & (1 << SPIF))) {}
-}
 
-uint8_t spi_master_rx()
-{
-	// spi_master_tx(0xFF);
 	return SPDR;
 }
 
