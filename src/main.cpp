@@ -1,5 +1,6 @@
 #include "message_parser.h"
 #include "pin.h"
+#include "spi_debugger.h"
 
 #include <Arduino.h>
 #include <string.h>
@@ -9,7 +10,7 @@ static const char hex_digits[16] = {
     '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
 };
 
-pin_t ss_pin = pin_define(B, 2);
+pin_t cs_pin = pin_define(B, 2);
 pin_t dbg_pin = pin_define(C, 0);
 
 bool is_hex_digit(const char digit)
@@ -75,6 +76,12 @@ uint8_t parse_hex_byte(const char h, const char l)
     uint8_t parsed_l = parse_hex_nibble(l);
 
     return (parsed_h & 0xF0) | (parsed_l & 0x0F);
+}
+
+void serial_println(const char *msg)
+{
+    Serial.print(msg);
+    Serial.print('\n');
 }
 
 // void handle_write(const char* message)
@@ -176,55 +183,97 @@ uint8_t parse_hex_byte(const char h, const char l)
 //     return;
 // }
 
-void handle_serial_data(const char* message)
+void handle_core_enable(const char *message)
+{
+    uint8_t length = strlen(message);
+
+    if (length != 2) {
+        goto error;
+    }
+
+    switch (message[1]) {
+        case 'E':
+            spi_debugger_init(&cs_pin, &dbg_pin);
+            break;
+
+        case 'D':
+            spi_debugger_deinit(&cs_pin, &dbg_pin);
+            break;
+
+        default:
+            goto error;
+    }
+
+    serial_println("ACK");
+    return;
+
+    error:
+    serial_println("EINV");
+    return;
+}
+
+void handle_serial_data(const char *message)
 {
     switch (message[0]) {
         // SET_ADDR_L
         case 'L':
+            serial_println("NOCMD");
             break;
 
         // SET_ADDR_H
         case 'H':
+            serial_println("NOCMD");
             break;
 
         // AUTO_INC_EN and AUTO_INC_DIS
         case 'I':
+            serial_println("NOCMD");
             break;
 
         // READ
         case 'R':
+            serial_println("NOCMD");
             break;
 
         // WRITE
         case 'W':
+            serial_println("NOCMD");
             break;
 
         // DATA
         case 'D':
+            serial_println("NOCMD");
             break;
 
         // CORE_ENABLE and CORE_DISABLE
         case 'C':
+            handle_core_enable(message);
             break;
 
         default:
-            Serial.print("NOCMD\n");
+            serial_println("NOCMD");
             break;
     }
 }
 
 void handle_serial_overload()
 {
-    Serial.print("BUFOVER\n");
+    serial_println("BUFOVER");
 }
 
 void setup() {
     parser_set_message_handler(handle_serial_data);
     parser_set_overload_handler(handle_serial_overload);
 
+    pin_direction(&cs_pin, PIN_OUTPUT);
+    pin_direction(&dbg_pin, PIN_OUTPUT);
+
+    pin_set(&cs_pin);
+    pin_clear(&dbg_pin);
+
     // Indicate that programmer is ready
     Serial.begin(115200);
-    Serial.print("READY;");
+    serial_println("RDY");
 }
 
 void loop() {

@@ -3,6 +3,10 @@
 
 #include <inttypes.h>
 
+#ifndef ENVIRONMENT_NATIVE
+typedef unsigned int size_t;
+#endif //ENVIRONMENT_NATIVE
+
 #ifdef __cplusplus
 extern "C" {
 #endif
