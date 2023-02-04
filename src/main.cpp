@@ -1,11 +1,12 @@
-#include "message_parser.h"
 #include "pin.h"
 #include "spi_debugger.h"
+
+#include "message_parser.h"
 
 #include <Arduino.h>
 #include <string.h>
 
-#define READ_BUFFER_SIZE 32
+#define DEBUGGER_DATA_BUFFER_SIZE 32
 
 static const char hex_digits[16] = {
     '0', '1', '2', '3', '4', '5', '6', '7',
@@ -90,108 +91,84 @@ uint8_t min_uint8(uint8_t a, uint8_t b) {
     return a < b ? a : b;
 }
 
-// void handle_write(const char* message)
-// {
-//     uint8_t length = strlen(message);
-//     uint8_t data = 0;
-
-//     if (length != 3) {
-//         goto error;
-//     }
-
-//     if (!is_hex_digit(message[1]) || !is_hex_digit(message[2])) {
-//         goto error;
-//     }
-
-//     data = parse_hex_byte(message[1], message[2]);
-
-//     pin_clear(&ss_pin);
-//     spi_master_tx(data);
-//     data = spi_master_rx();
-//     pin_set(&ss_pin);
-
-//     Serial.print("#R");
-//     Serial.print(compose_hex_nibble(data >> 4));
-//     Serial.print(compose_hex_nibble(data));
-//     Serial.print(';');
-
-//     return;
-
-//     error:
-//     Serial.print("#EINV;");
-//     return;
-// }
-
-// void handle_burst_write(const char* message)
-// {
-//     uint8_t length = strlen(message);
-//     uint8_t byte_length = length / 2;
-//     uint8_t data;
-//     char read_message[17];
-
-//     // message format is Bxxyyzz... where the lower case letters are some hex byte.
-//     // the maximum number of bursts is 8 bytes, hence the max size of 17
-//     // 1 command char + 2 chars/byte * nr. of bytes
-//     if (length % 2 == 0 || length < 3 || length > 17) {
-//         goto error;
-//     }
-
-//     for (uint8_t i = 1; i < length; i++) {
-//         if (!is_hex_digit(message[i])) {
-//             goto error;
-//         }
-//     }
-
-//     for (uint8_t i = 0; i < byte_length; i++) {
-//         uint8_t i_doubled = i * 2;
-//         data = parse_hex_byte(message[i_doubled + 1], message[i_doubled + 2]);
-    
-//         pin_clear(&ss_pin);
-//         spi_master_tx(data);
-//         data = spi_master_rx();
-//         pin_set(&ss_pin);
-
-//         read_message[i_doubled] = compose_hex_nibble(data >> 4);
-//         read_message[i_doubled + 1] = compose_hex_nibble(data);
-//         read_message[i_doubled + 2] = '\0';
-//     }
-
-//     Serial.print("#R");
-//     Serial.print(read_message);
-//     Serial.print(';');
-
-//     return;
-
-//     error:
-//     Serial.print("#EINV;");
-//     return;
-// }
-
-// void handle_dbg_enable(const char* message, bool enable)
-// {
-//     uint8_t length = strlen(message);
-
-//     if (length != 1) {
-//         goto error;
-//     }
-
-//     if (enable) {
-//         pin_set(&dbgen_pin);
-//     } else {
-//         pin_clear(&dbgen_pin);
-//     }
-
-//     Serial.print("#SUCCESS;");
-//     return;
-
-//     error:
-//     Serial.print("#EINV;");
-//     return;
-// }
-
 const char *get_error_str(const char **str_table, int8_t error_code)
 {
     return str_table[(error_code * -1) - 1];
+}
+
+uint16_t write_amount = 0;
+
+static const char *error_str_write[] = {
+    "EWBC",
+    "EWBD",
+    "EWBO",
+    "EWC",
+    "EWD"
+};
+
+void handle_write_data(const char *message)
+{
+    int8_t err;
+    uint8_t length = strlen(message);
+
+    if (length < 3 || length > 65 || length % 2 != 1) {
+        serial_println("EINV");
+        return;
+    }
+
+    for (uint8_t i = 1; i < length; i++) {
+        if (!is_hex_digit(message[i])) {
+            serial_println("EINV");
+            return;
+        }
+    }
+
+    uint16_t burst_amount = (length - 1) / 2;
+    if (burst_amount > write_amount) {
+        serial_println("EWROVER");
+        return;
+    }
+
+    // parse data into write buffer
+    uint8_t write_buffer[DEBUGGER_DATA_BUFFER_SIZE];
+    for (uint8_t write_index = 0, message_index = 1; write_index < burst_amount; write_index++, message_index+=2) {
+        write_buffer[write_index] = parse_hex_byte(message[message_index], message[message_index + 1]);
+    }
+
+    // send parsed data to be written
+    err = spi_debugger_write(&cs_pin, &dbg_pin, write_buffer, burst_amount);
+    if (err != 0) {
+        serial_println(get_error_str(error_str_write, err));
+        return;
+    }
+
+    serial_println("ACK");
+    return;
+}
+
+void handle_write_command(const char *message)
+{
+    uint8_t length = strlen(message);
+
+    if (length != 3) {
+        serial_println("EINV");
+        return;
+    }
+
+    if (!is_hex_digit(message[1]) || !is_hex_digit(message[2])) {
+        serial_println("EINV");
+        return;
+    }
+
+    if (write_amount != 0) {
+        serial_println("EBUSY");
+        return;
+    }
+
+    write_amount = parse_hex_byte(message[1], message[2]) + 1;
+
+    serial_println("ACK");
+    return;
 }
 
 static const char *error_str_read[] = {
@@ -217,10 +194,10 @@ void handle_read(const char *message)
     }
 
     uint16_t read_amount = parse_hex_byte(message[1], message[2]) + 1;
-    uint8_t read_buffer[READ_BUFFER_SIZE];
+    uint8_t read_buffer[DEBUGGER_DATA_BUFFER_SIZE];
 
-    for (uint16_t i = 0; i < read_amount; i+=READ_BUFFER_SIZE) {
-        uint8_t read_length = min_uint8(read_amount - i, READ_BUFFER_SIZE);
+    for (uint16_t i = 0; i < read_amount; i+=DEBUGGER_DATA_BUFFER_SIZE) {
+        uint8_t read_length = min_uint8(read_amount - i, DEBUGGER_DATA_BUFFER_SIZE);
         err = spi_debugger_read(&cs_pin, &dbg_pin, read_buffer, read_length);
 
         if (err != 0) {
@@ -377,12 +354,12 @@ void handle_serial_data(const char *message)
 
         // WRITE
         case 'W':
-            serial_println("NOCMD");
+            handle_write_command(message);
             break;
 
         // DATA
         case 'D':
-            serial_println("NOCMD");
+            handle_write_data(message);
             break;
 
         // CORE_ENABLE and CORE_DISABLE

@@ -3,7 +3,7 @@
 #ifndef MESSAGE_PARSER_H_
 #define MESSAGE_PARSER_H_
 
-// define MAX_MESSAGE_SIZE as default 32bytes
+// define MAX_MESSAGE_SIZE as default 32 bytes
 #ifndef MAX_MESSAGE_SIZE
 #define MAX_MESSAGE_SIZE 32
 #endif
