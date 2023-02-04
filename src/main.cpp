@@ -183,8 +183,60 @@ void serial_println(const char *msg)
 //     return;
 // }
 
+const char *get_error_str(const char **str_table, int8_t error_code)
+{
+    return str_table[(error_code * -1) - 1];
+}
+
+static const char *error_str_set_address[] = {
+    "EHAC",
+    "EHAD",
+    "ELAC",
+    "ELAD"
+};
+
+void handle_set_address(const char *message)
+{
+    uint8_t length = strlen(message);
+    int8_t err;
+    uint16_t address = 0;
+
+    if (length != 5) {
+        goto error;
+    }
+
+    for (uint8_t i = 1; i < length; i++) {
+        if (!is_hex_digit(message[i])) {
+            goto error;
+        }
+    }
+    
+    address |= parse_hex_byte(message[1], message[2]) << 8;
+    address |= parse_hex_byte(message[3], message[4]);
+
+    err = spi_debugger_set_address(&cs_pin, &dbg_pin, address);
+    if (err != 0) {
+        serial_println(get_error_str(error_str_set_address, err));
+        return;
+    }
+
+    serial_println("ACK");
+    return;
+
+    error:
+    serial_println("EINV");
+    return;
+}
+
+static const char *error_str_enable[] = {
+    "EFLUSH",
+    "EINCD",
+    "EADDR"
+};
+
 void handle_core_enable(const char *message)
 {
+    int8_t err;
     uint8_t length = strlen(message);
 
     if (length != 2) {
@@ -193,7 +245,11 @@ void handle_core_enable(const char *message)
 
     switch (message[1]) {
         case 'E':
-            spi_debugger_init(&cs_pin, &dbg_pin);
+            err = spi_debugger_init(&cs_pin, &dbg_pin);
+            if (err != 0) {
+                serial_println(get_error_str(error_str_enable, err));
+                return;
+            }
             break;
 
         case 'D':
@@ -215,14 +271,9 @@ void handle_core_enable(const char *message)
 void handle_serial_data(const char *message)
 {
     switch (message[0]) {
-        // SET_ADDR_L
-        case 'L':
-            serial_println("NOCMD");
-            break;
-
-        // SET_ADDR_H
-        case 'H':
-            serial_println("NOCMD");
+        // SET_ADDR_H and SET_ADDR_L
+        case 'A':
+            handle_set_address(message);
             break;
 
         // AUTO_INC_EN and AUTO_INC_DIS
