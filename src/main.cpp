@@ -188,6 +188,43 @@ const char *get_error_str(const char **str_table, int8_t error_code)
     return str_table[(error_code * -1) - 1];
 }
 
+void handle_set_auto_increment(const char *message)
+{
+    int8_t err;
+    bool enable_auto_increment;
+    uint8_t length = strlen(message);
+
+    if (length != 2) {
+        goto error;
+    }
+
+    switch (message[1]) {
+        case 'E':
+            enable_auto_increment = true;
+            break;
+
+        case 'D':
+            enable_auto_increment = false;
+            break;
+
+        default:
+            goto error;
+    }
+
+    err = spi_debugger_set_auto_increment(&cs_pin, &dbg_pin, enable_auto_increment);
+    if (err != 0) {
+        serial_println("EAIC");
+        return;
+    }
+
+    serial_println("ACK");
+    return;
+
+    error:
+    serial_println("EINV");
+    return;
+}
+
 static const char *error_str_set_address[] = {
     "EHAC",
     "EHAD",
@@ -278,7 +315,7 @@ void handle_serial_data(const char *message)
 
         // AUTO_INC_EN and AUTO_INC_DIS
         case 'I':
-            serial_println("NOCMD");
+            handle_set_auto_increment(message);
             break;
 
         // READ
