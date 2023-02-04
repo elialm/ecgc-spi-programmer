@@ -5,6 +5,8 @@
 #include <Arduino.h>
 #include <string.h>
 
+#define READ_BUFFER_SIZE 32
+
 static const char hex_digits[16] = {
     '0', '1', '2', '3', '4', '5', '6', '7',
     '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
@@ -82,6 +84,10 @@ void serial_println(const char *msg)
 {
     Serial.print(msg);
     Serial.print('\n');
+}
+
+uint8_t min_uint8(uint8_t a, uint8_t b) {
+    return a < b ? a : b;
 }
 
 // void handle_write(const char* message)
@@ -186,6 +192,52 @@ void serial_println(const char *msg)
 const char *get_error_str(const char **str_table, int8_t error_code)
 {
     return str_table[(error_code * -1) - 1];
+}
+
+static const char *error_str_read[] = {
+    "ERBC",
+    "ERBZ",
+    "ERC",
+    "ERZ"
+};
+
+void handle_read(const char *message)
+{
+    int8_t err;
+    uint8_t length = strlen(message);
+
+    if (length != 3) {
+        serial_println("EINV");
+        return;
+    }
+
+    if (!is_hex_digit(message[1]) || !is_hex_digit(message[2])) {
+        serial_println("EINV");
+        return;
+    }
+
+    uint16_t read_amount = parse_hex_byte(message[1], message[2]) + 1;
+    uint8_t read_buffer[READ_BUFFER_SIZE];
+
+    for (uint16_t i = 0; i < read_amount; i+=READ_BUFFER_SIZE) {
+        uint8_t read_length = min_uint8(read_amount - i, READ_BUFFER_SIZE);
+        err = spi_debugger_read(&cs_pin, &dbg_pin, read_buffer, read_length);
+
+        if (err != 0) {
+            serial_println(get_error_str(error_str_read, err));
+            return;
+        }
+
+        // send read data over serial
+        Serial.print('D');
+        for (uint8_t j = 0; j < read_length; j++) {
+            Serial.print(compose_hex_nibble(read_buffer[j] >> 4));
+            Serial.print(compose_hex_nibble(read_buffer[j]));
+        }
+        Serial.print('\n');
+    }
+
+    return;
 }
 
 void handle_set_auto_increment(const char *message)
@@ -320,7 +372,7 @@ void handle_serial_data(const char *message)
 
         // READ
         case 'R':
-            serial_println("NOCMD");
+            handle_read(message);
             break;
 
         // WRITE
