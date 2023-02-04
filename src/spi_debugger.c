@@ -98,7 +98,7 @@ int8_t spi_debugger_set_address(pin_t *cs_pin, pin_t *dbg_pin, uint16_t address)
     // set high address data
     address_data[0] = address_high;
     address_response_pattern[2] = address_high;
-    if ((err = __spi_debugger_send_packet(address_data, read_buffer, 2, address_response_pattern)) != 0) {
+    if ((err = __spi_debugger_send_packet(cs_pin, address_data, read_buffer, 2, address_response_pattern)) != 0) {
         return -2;
     }
 
