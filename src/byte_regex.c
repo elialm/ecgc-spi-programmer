@@ -25,7 +25,7 @@ int byte_regex_validate_pattern(const uint8_t* pattern)
     }
 
     unsigned int i;
-    unsigned int pattern_length = strlen(pattern);
+    unsigned int pattern_length = strlen((const char*)pattern);
 
     if (pattern_length == 0) {
         return -EINVAL;
@@ -73,18 +73,23 @@ int byte_regex_match(const uint8_t* pattern, const uint8_t* data, const size_t d
 
     unsigned int data_index = 0;
     unsigned int pattern_index = 0;
-    unsigned int pattern_length = strlen(pattern);
     bool error_occurred = false;
+    bool pattern_ended = false;
 
-    for (; pattern_index < pattern_length && data_index < data_length; pattern_index++) {
+    for (; !pattern_ended && data_index < data_length; pattern_index++) {
         uint8_t cmd = pattern[pattern_index] & 0x0F;
         uint8_t arg = pattern[pattern_index] & 0xF0;
 
         switch (cmd) {
+            // null terminator: quit looping
+            case 0x00:
+                pattern_ended = true;
+                break;
+
             // expect next n bytes (given by arg)
             case 0x01:
                 arg = (arg >> 4) + 1;
-                for (uint8_t i = 0; i < arg && data_index < data_length && pattern_index < (pattern_length - 1); i++, data_index++, pattern_index++) {
+                for (uint8_t i = 0; i < arg && data_index < data_length; i++, data_index++, pattern_index++) {
                     if (data[data_index] != pattern[pattern_index + 1]) {
                         error_occurred = true;
                         break;
@@ -123,8 +128,13 @@ int byte_regex_match(const uint8_t* pattern, const uint8_t* data, const size_t d
         }
     }
 
-    // if either index is not equal to length, the pattern loop did not go successfully
-    if (pattern_index != pattern_length || data_index != data_length) {
+    // check if pattern ended on null terminator
+    if (pattern[pattern_index] == '\0') {
+        pattern_ended = true;
+    }
+
+    // if either data and pattern have not been exhausted, the pattern loop did not go successfully
+    if (!pattern_ended || data_index != data_length) {
         error_occurred = true;
     }
 

@@ -3,6 +3,8 @@
 
 #include <inttypes.h>
 
+#define PATTERN_STRING(pattern) ((const uint8_t*)pattern)
+
 #ifndef ENVIRONMENT_NATIVE
 typedef unsigned int size_t;
 #endif //ENVIRONMENT_NATIVE
