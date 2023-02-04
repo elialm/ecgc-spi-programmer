@@ -142,6 +142,8 @@ void handle_write_data(const char *message)
         return;
     }
 
+    write_amount -= burst_amount;
+
     serial_println("ACK");
     return;
 }
