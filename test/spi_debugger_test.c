@@ -1,19 +1,23 @@
 #ifndef ENVIRONMENT_NATIVE
 
+#include <Arduino.h>
+
 #include "unity.h"
+
+#include "spi.c"
+#include "pin.c"
 #include "spi_debugger.c"
-#include "pin.h"
 
 const uint8_t *test_data = "\xc3[B>\xfa\xaf\xcb&\x1a\xaa\x98@\x03\xf5\x9a\x05\xf4=";
 pin_t ss_pin;
 pin_t dbg_pin;
 
-void setUp(void)
+void spi_debugger_setup(void)
 {
     // set stuff up here
 }
 
-void tearDown(void)
+void spi_debugger_teardown(void)
 {
     spi_debugger_deinit(&ss_pin, &dbg_pin);
 }
@@ -80,7 +84,7 @@ void test_spi_debugger_write_read_individual_and_burst()
     UNITY_TEST_ASSERT_EQUAL_UINT8_ARRAY(test_data, read_buffer, data_length, __LINE__, "");
 }
 
-int runUnityTests(void)
+int spi_debugger_run_tests(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_spi_debugger_init);
@@ -92,21 +96,5 @@ int runUnityTests(void)
     RUN_TEST(test_spi_debugger_write_read_individual_and_burst);
     return UNITY_END();
 }
-
-/**
-  * For Arduino framework
-  */
-void setup()
-{
-    // Wait ~2 seconds before the Unity test runner
-    // establishes connection with a board Serial interface
-    delay(2000);
-
-    ss_pin = pin_define(B, 2);
-    dbg_pin = pin_define(C, 0);
-
-    runUnityTests();
-}
-void loop() {}
 
 #endif //ENVIRONMENT_NATIVE

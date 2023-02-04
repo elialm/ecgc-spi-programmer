@@ -3,12 +3,12 @@
 
 #include <errno.h>
 
-void setUp(void)
+void byte_regex_setup(void)
 {
     // set stuff up here
 }
 
-void tearDown(void)
+void byte_regex_teardown(void)
 {
     // clean stuff up here
 }
@@ -91,7 +91,7 @@ void test_match_pattern_5()
     UNITY_TEST_ASSERT_EQUAL_INT(1, return_code, __LINE__, "Unexpected return code");
 }
 
-int runUnityTests(void)
+int byte_regex_run_tests(void)
 {
     UNITY_BEGIN();
     // RUN_TEST(test_compile_pattern_0);
@@ -104,25 +104,3 @@ int runUnityTests(void)
     RUN_TEST(test_match_pattern_5);
     return UNITY_END();
 }
-
-/**
-  * For native dev-platform or for some embedded frameworks
-  */
-int main(void) {
-    return runUnityTests();
-}
-
-/**
-  * For Arduino framework
-  */
-void setup()
-{
-    // Wait ~2 seconds before the Unity test runner
-    // establishes connection with a board Serial interface
-    #ifndef ENVIRONMENT_NATIVE
-    delay(2000);
-    #endif //ENVIRONMENT_NATIVE
-
-    runUnityTests();
-}
-void loop() {}
