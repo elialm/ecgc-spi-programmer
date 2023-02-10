@@ -199,7 +199,10 @@ void handle_read(const char *message)
     uint8_t read_buffer[DEBUGGER_DATA_BUFFER_SIZE];
 
     for (uint16_t i = 0; i < read_amount; i+=DEBUGGER_DATA_BUFFER_SIZE) {
-        uint8_t read_length = min_uint8(read_amount - i, DEBUGGER_DATA_BUFFER_SIZE);
+        uint8_t read_length = (read_amount - i) < DEBUGGER_DATA_BUFFER_SIZE
+            ? read_amount - i
+            : DEBUGGER_DATA_BUFFER_SIZE;
+
         err = spi_debugger_read(&cs_pin, &dbg_pin, read_buffer, read_length);
 
         if (err != 0) {
